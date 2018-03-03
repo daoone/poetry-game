@@ -22,17 +22,17 @@ contract Owned {
 contract ERC20Token {
     /// total amount of tokens
     uint256 public totalSupply;
-    function balanceOf(address _owner) constant returns (uint256 balance);
-    function transfer(address _to, uint256 _value) returns (bool success);
-    function transferFrom(address _from, address _to, uint256 _value) returns (bool success);
-    function approve(address _spender, uint256 _value) returns (bool success);
-    function allowance(address _owner, address _spender) constant returns (uint256 remaining);
+    function balanceOf(address _owner) constant public returns (uint256 balance);
+    function transfer(address _to, uint256 _value) public returns (bool success);
+    function transferFrom(address _from, address _to, uint256 _value) public returns (bool success);
+    function approve(address _spender, uint256 _value) public returns (bool success);
+    function allowance(address _owner, address _spender) constant public returns (uint256 remaining);
     event Transfer(address indexed _from, address indexed _to, uint256 _value);
     event Approval(address indexed _owner, address indexed _spender, uint256 _value);
 }
 
 // 自己的token
-contract XmbToken is Owned, ERC20Token {
+contract XmbToken is ERC20Token, Owned {
     using SafeMath for uint256;
     string public name;
     string public symbol;
@@ -44,6 +44,7 @@ contract XmbToken is Owned, ERC20Token {
     mapping (address => mapping (address => uint256)) allowed;
 
     event Transfer(address indexed from, address indexed to, uint256 value);
+    event Approval(address indexed _owner, address indexed _spender, uint256 _value);
 	event MakePoem(string poem);
     event RechargeFaith(address indexed to, uint256 value, uint256 refund);
 
@@ -117,7 +118,7 @@ contract XmbToken is Owned, ERC20Token {
         RechargeFaith(msg.sender, rechargeAmount, _refund);
     }
 
-    function tokenExchange(uint256 inputAmount) internal returns (uint256) {
+    function tokenExchange(uint256 inputAmount) internal view returns (uint256) {
         return inputAmount.mul(rechargeRate);
     }
 
@@ -148,7 +149,7 @@ contract Poetry is XmbToken {
 
     event PoemAdded(address from, uint poemId);
     event PoemVoted(address from, address to, uint poemId, uint256 value);
-    event RewardPushlished();
+    event RewardPushlished(address from, address to, uint256 value);
 
     struct Poem {
         bytes32 poemHash; // 投票核对用hash
@@ -206,6 +207,7 @@ contract Poetry is XmbToken {
         uint tmpVoteCounter = 0;
         for (uint i = 0; i <= winners.length-1; i++) {
             poems[winners[i]].poet.poetAddr.transfer(eachPoetReward);
+            RewardPushlished(this, poems[winners[i]].poet.poetAddr, eachPoetReward);
             tmpVoteCounter += poems[winners[i]].voteCounts;
         }
         eachVoterReward = voteReward.div(tmpVoteCounter);
@@ -219,6 +221,7 @@ contract Poetry is XmbToken {
             if (poems[winners[i]].voted[msg.sender]) {
                 msg.sender.transfer(eachVoterReward);
                 poems[winners[i]].voted[msg.sender] = false;
+                RewardPushlished(this, msg.sender, eachVoterReward);
             }
         }
     }
@@ -240,43 +243,27 @@ contract Poetry is XmbToken {
 
 // 安全计算方法库
 library SafeMath {
-  function mul(uint a, uint b) internal returns (uint) {
+  function mul(uint a, uint b) internal pure returns (uint) {
     uint c = a * b;
     assert(a == 0 || c / a == b);
     return c;
   }
 
-  function div(uint a, uint b) internal returns (uint) {
+  function div(uint a, uint b) internal pure returns (uint) {
     // assert(b > 0); // Solidity automatically throws when dividing by 0
     uint c = a / b;
     // assert(a == b * c + a % b); // There is no case in which this doesn't hold
     return c;
   }
 
-  function sub(uint a, uint b) internal returns (uint) {
+  function sub(uint a, uint b) internal pure returns (uint) {
     assert(b <= a);
     return a - b;
   }
 
-  function add(uint a, uint b) internal returns (uint) {
+  function add(uint a, uint b) internal pure returns (uint) {
     uint c = a + b;
     assert(c >= a);
     return c;
-  }
-
-  function max64(uint64 a, uint64 b) internal constant returns (uint64) {
-    return a >= b ? a : b;
-  }
-
-  function min64(uint64 a, uint64 b) internal constant returns (uint64) {
-    return a < b ? a : b;
-  }
-
-  function max256(uint256 a, uint256 b) internal constant returns (uint256) {
-    return a >= b ? a : b;
-  }
-
-  function min256(uint256 a, uint256 b) internal constant returns (uint256) {
-    return a < b ? a : b;
   }
 }
