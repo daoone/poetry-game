@@ -121,7 +121,7 @@ contract XmbToken is Owned, ERC20Token {
         return inputAmount.mul(rechargeRate);
     }
 
-    function () public payable {
+    function buy() payable public {
         require(msg.sender != 0x0 && msg.sender != owner);
         if (msg.value != 0) {
             rechargeFaith(msg.value);
@@ -131,6 +131,10 @@ contract XmbToken is Owned, ERC20Token {
 
 // 游戏合约逻辑
 contract Poetry is XmbToken {
+    bool public gameover = false;
+    uint256 public poemReward = 15 ether;
+    uint256 public voteReward = 85 ether;
+    uint256 public eachVoterReward; // 评价投票人奖励，减少之后的计算
     Poem[] public poems; // 所有诗歌
     uint256 public maxVotes; // 现有最高投票数
     uint[] public winners; // 现有最高票数的诗歌id 
@@ -144,11 +148,13 @@ contract Poetry is XmbToken {
 
     event PoemAdded(address from, uint poemId);
     event PoemVoted(address from, address to, uint poemId, uint256 value);
+    event RewardPushlished();
 
     struct Poem {
-        bytes32 poemHash;
-        string content;
-        uint256 votes;
+        bytes32 poemHash; // 投票核对用hash
+        string content; // 诗歌内容
+        uint256 votes; // 获得的token投票
+        uint voteCounts; // 获得的投票人次
         mapping (address => bool) voted;
         Poet poet;
     }
@@ -159,6 +165,7 @@ contract Poetry is XmbToken {
     }
 
     function newPoem(string poemContent) public returns (uint poemId) {
+        require(gameover == false);
         poemId = poems.length++;
 
         Poem storage pm = poems[poemId];
@@ -170,6 +177,7 @@ contract Poetry is XmbToken {
     }
 
     function votePoem(uint poemId, uint256 _value) onlyMembers public {
+        require(gameover == false);
         require(_value <= balances[msg.sender]);
         Poem storage pm = poems[poemId];
         require(!pm.voted[msg.sender]);
@@ -179,6 +187,7 @@ contract Poetry is XmbToken {
         balances[pm.poet.poetAddr] += _value;
         pm.votes += _value;
         pm.poet.voteSum += _value;
+        pm.voteCounts ++;
 
         if (pm.votes > maxVotes) {
             maxVotes = pm.votes;
@@ -190,13 +199,27 @@ contract Poetry is XmbToken {
         PoemVoted(msg.sender, pm.poet.poetAddr, poemId, _value);
     }
 
-    // 奖励赢家 unfinished
+    // 奖励赢家
     function reward() payable public returns (bool) {
-        require(msg.sender == owner);
-        
+        require((msg.sender == owner) && (this.balance > (poemReward + voteReward)));
+        uint256 eachPoetReward = poemReward.div(winners.length);
+        uint tmpVoteCounter = 0;
         for (uint i = 0; i <= winners.length-1; i++) {
-            Poem[winners[i]].poet.poetAddr; 
+            poems[winners[i]].poet.poetAddr.transfer(eachPoetReward);
+            tmpVoteCounter += poems[winners[i]].voteCounts;
+        }
+        eachVoterReward = voteReward.div(tmpVoteCounter);
+        gameover = true;
+    }
 
+    // 投票人主动来领奖
+    function getVoterReward() public {
+        require(gameover);
+        for (uint i = 0; i <= winners.length-1; i++) {
+            if (poems[winners[i]].voted[msg.sender]) {
+                msg.sender.transfer(eachVoterReward);
+                poems[winners[i]].voted[msg.sender] = false;
+            }
         }
     }
 
@@ -210,6 +233,9 @@ contract Poetry is XmbToken {
         winners.push(poemId);
     }
 
+    // function sell(uint sellAmount) public {
+    //     // 卖出token 暂不支持
+    // }
 }
 
 // 安全计算方法库
