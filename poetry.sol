@@ -36,16 +36,12 @@ contract XmbToken is ERC20Token, Owned {
     string public name;
     string public symbol;
     uint8 public decimals;
-    uint256 public rechargeLimit = 30 ether; // 最高可一次购买 30 ether 的token 增加刷票成本、也可以用approve控制
-    uint256 public rechargeRate = 1000; // 兑换以太坊 1:1000
 
     mapping (address => uint256) public balances;
     mapping (address => mapping (address => uint256)) allowed;
 
     event Transfer(address indexed from, address indexed to, uint256 value);
     event Approval(address indexed _owner, address indexed _spender, uint256 _value);
-	event MakePoem(string poem);
-    event RechargeFaith(address indexed to, uint256 value, uint256 refund);
 
     function XmbToken(uint256 initialSupply, uint8 decimalUnits) public {
         name = "XmbToken";
@@ -99,44 +95,10 @@ contract XmbToken is ERC20Token, Owned {
         return false;
     }
 
-    function rechargeFaith(uint256 rechargeAmount) internal {
-        uint256 distrbution;
-        uint256 _refund = 0;
-        // 转入金额大于0 并且转换后小于可分发token的数量
-        if ((rechargeAmount > 0) && (tokenExchange(rechargeAmount) < balances[owner])) {
-            if (rechargeAmount > rechargeLimit) {
-                // 超过兑换限制会把多余的退回去
-                _refund = rechargeAmount.sub(rechargeLimit);
-                msg.sender.transfer(_refund);
-                distrbution = tokenExchange(rechargeLimit);
-            } else {
-                distrbution = tokenExchange(rechargeAmount);
-            }
-            balances[owner] -= distrbution;
-            balances[msg.sender] += distrbution;
-        }
-        RechargeFaith(msg.sender, rechargeAmount, _refund);
-    }
-
-    function tokenExchange(uint256 inputAmount) internal view returns (uint256) {
-        return inputAmount.mul(rechargeRate);
-    }
-
-    function buy() payable public {
-        require(msg.sender != 0x0 && msg.sender != owner);
-        if (msg.value != 0) {
-            rechargeFaith(msg.value);
-        }
-    }
-
-    // 合约外部调用获取
-    function getOwner() view external returns (address) {
-        return owner;
-    }
 }
 
 // 游戏合约逻辑
-contract Poetry {
+contract Poetry is Owned {
     using SafeMath for uint256;
 
     // 避免结构体的嵌套，我使用过嵌套会出现 UnimplementedFeatureError
@@ -156,6 +118,8 @@ contract Poetry {
     Poem[] public poems; // 所有诗歌
     uint256 public maxVotes; // 现有最高投票数
     uint[] public winners; // 现有最高票数的诗歌id 
+    uint256 public rechargeLimit = 30 ether; // 最高可一次购买 30 ether 的token 增加刷票成本、也可以用approve控制
+    uint256 public rechargeRate = 1000; // 兑换以太坊 1:1000
 
 
     function Poetry(uint256 initialSupply, uint8 decimalUnits) public {
@@ -165,6 +129,7 @@ contract Poetry {
     event PoemAdded(address from, uint poemId);
     event PoemVoted(address from, address to, uint poemId, uint256 value);
     event RewardPushlished(address from, address to, uint256 value);
+    event RechargeFaith(address indexed to, uint256 ethValue, uint256 distrbution, uint256 refund);
 
     modifier onlyMembers() {
         require(xmb.balances(msg.sender) > 0);
@@ -190,7 +155,7 @@ contract Poetry {
         require(!pm.voted[msg.sender]);
         pm.voted[msg.sender] = true;
 
-        assert(xmb.transfer(pm.poetAddr, _value));
+        assert(xmb.transferFrom(msg.sender, pm.poetAddr, _value));
         pm.votes += _value;
         pm.voteCounts ++;
 
@@ -205,8 +170,8 @@ contract Poetry {
     }
 
     // 奖励赢家
-    function reward() payable public returns (bool) {
-        require((msg.sender == xmb.getOwner()) && (this.balance > (poemReward + voteReward)));
+    function reward() public returns (bool) {
+        require((msg.sender == owner) && (this.balance > (poemReward + voteReward)));
         uint256 eachPoetReward = poemReward.div(winners.length);
         uint tmpVoteCounter = 0;
         for (uint i = 0; i <= winners.length-1; i++) {
@@ -240,6 +205,31 @@ contract Poetry {
         winners.push(poemId);
     }
 
+    function getBalance(address owner) view public returns (uint256) {
+        return xmb.balanceOf(owner);
+    }
+
+    function buyXmb() payable public {
+        uint256 distrbution;
+        uint256 _refund = 0;
+        // 转入金额大于0 并且转换后小于可分发token的数量
+        if ((msg.value > 0) && (tokenExchange(msg.value) < xmb.balances(this))) {
+            if (msg.value > rechargeLimit) {
+                // 超过兑换限制会把多余的退回去
+                _refund = msg.value.sub(rechargeLimit);
+                msg.sender.transfer(_refund);
+                distrbution = tokenExchange(rechargeLimit);
+            } else {
+                distrbution = tokenExchange(msg.value);
+            }
+            xmb.transfer(msg.sender, distrbution);
+        }
+        RechargeFaith(msg.sender, msg.value, distrbution, _refund);
+    }
+
+    function tokenExchange(uint256 inputAmount) internal view returns (uint256) {
+        return inputAmount.mul(rechargeRate);
+    }
 //     // function sell(uint sellAmount) public {
 //     //     // 卖出token 暂不支持
 //     // }
