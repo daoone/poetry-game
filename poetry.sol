@@ -95,7 +95,6 @@ contract XmbToken is ERC20Token, Owned {
         }
         return false;
     }
-
 }
 
 // 诗歌游戏合约逻辑
@@ -131,6 +130,7 @@ contract Poetry is Owned {
     event PoemVoted(address from, address to, uint poemId, uint256 value);
     event RewardPushlished(address from, address to, uint256 value);
     event RechargeFaith(address indexed to, uint256 ethValue, uint256 distrbution, uint256 refund);
+    event TokenIncrease(uint256 value, uint256 balance);
 
     // 写诗
     function addPoem(string poemContent) public returns (uint poemId) {
@@ -170,7 +170,7 @@ contract Poetry is Owned {
     }
 
     // 最终奖励赢家
-    function reward() public returns (bool) {
+    function reward() payable public {
         require((msg.sender == owner) && (this.balance > (poemReward + voteReward)));
         uint256 eachPoetReward = poemReward.div(winners.length);
         uint tmpVoteCounter = 0;
@@ -231,6 +231,13 @@ contract Poetry is Owned {
 
     function tokenExchange(uint256 inputAmount) internal view returns (uint256) {
         return inputAmount.mul(rechargeRate);
+    }
+
+    // 增发入口
+    function tokenIncrease(uint256 value) payable public {
+        require(msg.sender == owner);
+        xmb.additional(value);
+        TokenIncrease(value, this.balance);
     }
 
     // function sell(uint sellAmount) public {
