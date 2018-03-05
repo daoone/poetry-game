@@ -10,9 +10,9 @@ contract Owned {
     // 一个函数执行的前置条件
     modifier onlyOwner() {
         require(msg.sender == owner);
-        _; // modifier的固定结束写法
+        _;
     }
-    // 更改合约所有人，初始化的时候是小明
+    // 更改合约所有人
     function changeOwner(address newOwner) onlyOwner public {
         owner = newOwner;
     }
@@ -31,6 +31,7 @@ contract ERC20Token {
 }
 
 // 自己的token 继承ERC20Token, Owned
+// 该合约只由Poetry初始化，所以owner为Poetry
 contract XmbToken is ERC20Token, Owned {
     using SafeMath for uint256; // 使用我们自己的计算库扩展
     string public name;
@@ -97,7 +98,7 @@ contract XmbToken is ERC20Token, Owned {
 
 }
 
-// 游戏合约逻辑
+// 诗歌游戏合约逻辑
 contract Poetry is Owned {
     using SafeMath for uint256;
 
@@ -111,15 +112,15 @@ contract Poetry is Owned {
     }
 
     XmbToken public xmb;
-    bool public gameover = false;
-    uint256 public poemReward = 15 ether;
-    uint256 public voteReward = 85 ether;
+    bool public gameover = false; // 结束游戏参与期
+    uint256 public poemReward = 15 ether; // 诗人最终奖励
+    uint256 public voteReward = 85 ether; // 投票人最终奖励
     uint256 public eachVoterReward; // 评价投票人奖励，减少之后的计算
     Poem[] public poems; // 所有诗歌
     uint256 public maxVotes; // 现有最高投票数
     uint[] public winners; // 现有最高票数的诗歌id 
     uint256 public rechargeLimit = 30 ether; // 最高可一次购买 30 ether 的token 增加刷票成本、也可以用approve控制
-    uint256 public rechargeRate = 1000; // 兑换以太坊 1:1000
+    uint256 public rechargeRate = 1000; // XMB兑换以太坊 1:1000
 
 
     function Poetry(uint256 initialSupply, uint8 decimalUnits) public {
@@ -131,31 +132,30 @@ contract Poetry is Owned {
     event RewardPushlished(address from, address to, uint256 value);
     event RechargeFaith(address indexed to, uint256 ethValue, uint256 distrbution, uint256 refund);
 
-    modifier onlyMembers() {
-        require(xmb.balances(msg.sender) > 0);
-        _;
-    }
-
-    function newPoem(string poemContent) public returns (uint poemId) {
+    // 写诗
+    function addPoem(string poemContent) public returns (uint poemId) {
         require(gameover == false);
         poemId = poems.length++;
 
         Poem storage pm = poems[poemId];
         pm.content = poemContent;
         pm.votes = 0;
+        pm.voteCounts = 0;
         pm.poetAddr = msg.sender;
+        pm.voted[msg.sender] = true;
 
         PoemAdded(msg.sender, poemId);
     }
 
-    function votePoem(uint poemId, uint256 _value) onlyMembers public {
-        require(gameover == false);
-        require(_value <= xmb.balances(msg.sender));
+    // 投票
+    function votePoem(uint poemId, uint256 _value) public {
+        require(!gameover);
+        require(xmb.balances(msg.sender) > 0 && _value <= xmb.balances(msg.sender));
         Poem storage pm = poems[poemId];
         require(!pm.voted[msg.sender]);
         pm.voted[msg.sender] = true;
 
-        assert(xmb.transferFrom(msg.sender, pm.poetAddr, _value));
+        xmb.transferFrom(msg.sender, pm.poetAddr, _value);
         pm.votes += _value;
         pm.voteCounts ++;
 
@@ -169,7 +169,7 @@ contract Poetry is Owned {
         PoemVoted(msg.sender, pm.poetAddr, poemId, _value);
     }
 
-    // 奖励赢家
+    // 最终奖励赢家
     function reward() public returns (bool) {
         require((msg.sender == owner) && (this.balance > (poemReward + voteReward)));
         uint256 eachPoetReward = poemReward.div(winners.length);
@@ -205,10 +205,12 @@ contract Poetry is Owned {
         winners.push(poemId);
     }
 
+    // 查询个人XMB余额
     function getBalance(address owner) view public returns (uint256) {
         return xmb.balanceOf(owner);
     }
 
+    // 兑换XMB
     function buyXmb() payable public {
         uint256 distrbution;
         uint256 _refund = 0;
@@ -230,34 +232,33 @@ contract Poetry is Owned {
     function tokenExchange(uint256 inputAmount) internal view returns (uint256) {
         return inputAmount.mul(rechargeRate);
     }
-//     // function sell(uint sellAmount) public {
-//     //     // 卖出token 暂不支持
-//     // }
+
+    // function sell(uint sellAmount) public {
+    //     // 卖出token 暂不支持
+    // }
 }
 
 // 安全计算方法库
 library SafeMath {
-  function mul(uint a, uint b) internal pure returns (uint) {
-    uint c = a * b;
-    assert(a == 0 || c / a == b);
-    return c;
-  }
+    function mul(uint a, uint b) internal pure returns (uint) {
+        uint c = a * b;
+        assert(a == 0 || c / a == b);
+        return c;
+    }
 
-  function div(uint a, uint b) internal pure returns (uint) {
-    // assert(b > 0); // Solidity automatically throws when dividing by 0
-    uint c = a / b;
-    // assert(a == b * c + a % b); // There is no case in which this doesn't hold
-    return c;
-  }
+    function div(uint a, uint b) internal pure returns (uint) {
+        uint c = a / b;
+        return c;
+    }
 
-  function sub(uint a, uint b) internal pure returns (uint) {
-    assert(b <= a);
-    return a - b;
-  }
+    function sub(uint a, uint b) internal pure returns (uint) {
+        assert(b <= a);
+        return a - b;
+    }
 
-  function add(uint a, uint b) internal pure returns (uint) {
-    uint c = a + b;
-    assert(c >= a);
-    return c;
-  }
+    function add(uint a, uint b) internal pure returns (uint) {
+        uint c = a + b;
+        assert(c >= a);
+        return c;
+    }
 }
