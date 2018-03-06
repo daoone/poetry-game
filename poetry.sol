@@ -33,7 +33,7 @@ contract ERC20Token {
 // 自己的token 继承ERC20Token, Owned
 // 该合约只由Poetry初始化，所以owner为Poetry
 contract XmbToken is ERC20Token, Owned {
-    using SafeMath for uint256; // 使用我们自己的计算库扩展
+    using SafeMath for uint256;
     string public name;
     string public symbol;
     uint8 public decimals;
