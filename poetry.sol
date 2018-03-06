@@ -99,6 +99,7 @@ contract XmbToken is ERC20Token, Owned {
 
 // 诗歌游戏合约逻辑
 contract Poetry is Owned {
+    // uint256能够使用SafeMath中的方法
     using SafeMath for uint256;
 
     // 避免结构体的嵌套，我使用过嵌套会出现 UnimplementedFeatureError
@@ -120,9 +121,15 @@ contract Poetry is Owned {
     uint[] public winners; // 现有最高票数的诗歌id 
     uint256 public rechargeLimit = 30 ether; // 最高可一次购买 30 ether 的token 增加刷票成本、也可以用approve控制
     uint256 public rechargeRate = 1000; // XMB兑换以太坊 1:1000
+    uint256 public startBlock; // 起始块
+    uint256 public stopBlock; // 结束块
 
 
     function Poetry(uint256 initialSupply, uint8 decimalUnits) public {
+        // 用恒定的块产出时间限定游戏活动时间
+        // 178560 约等于 31天
+        startBlock = block.number;
+        stopBlock = startBlock.add(178560);
         xmb = new XmbToken(initialSupply, decimalUnits);
     }
 
@@ -132,9 +139,20 @@ contract Poetry is Owned {
     event RechargeFaith(address indexed to, uint256 ethValue, uint256 distrbution, uint256 refund);
     event TokenIncrease(uint256 value, uint256 balance);
 
+    // 游戏进行中
+    modifier isNotOver() {
+        require(block.number <= stopBlock);
+        _;
+    }
+
+    // 游戏结束
+    modifier gameOver() {
+        require(block.number > stopBlock);
+        _;
+    }
+
     // 写诗
-    function addPoem(string poemContent) public returns (uint poemId) {
-        require(gameover == false);
+    function addPoem(string poemContent) isNotOver public returns (uint poemId) {
         poemId = poems.length++;
 
         Poem storage pm = poems[poemId];
@@ -148,8 +166,7 @@ contract Poetry is Owned {
     }
 
     // 投票
-    function votePoem(uint poemId, uint256 _value) public {
-        require(!gameover);
+    function votePoem(uint poemId, uint256 _value) isNotOver public {
         require(xmb.balances(msg.sender) > 0 && _value <= xmb.balances(msg.sender));
         Poem storage pm = poems[poemId];
         require(!pm.voted[msg.sender]);
@@ -170,7 +187,7 @@ contract Poetry is Owned {
     }
 
     // 最终奖励赢家
-    function reward() payable public {
+    function reward() gameOver payable public {
         require((msg.sender == owner) && (this.balance > (poemReward + voteReward)));
         uint256 eachPoetReward = poemReward.div(winners.length);
         uint tmpVoteCounter = 0;
@@ -180,11 +197,10 @@ contract Poetry is Owned {
             tmpVoteCounter += poems[winners[i]].voteCounts;
         }
         eachVoterReward = voteReward.div(tmpVoteCounter);
-        gameover = true;
     }
 
     // 投票人主动来领奖
-    function getVoterReward() public {
+    function getVoterReward() gameOver public {
         require(gameover);
         for (uint i = 0; i <= winners.length-1; i++) {
             if (poems[winners[i]].voted[msg.sender]) {
