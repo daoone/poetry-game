@@ -121,15 +121,13 @@ contract Poetry is Owned {
     uint[] public winners; // 现有最高票数的诗歌id 
     uint256 public rechargeLimit = 30 ether; // 最高可一次购买 30 ether 的token 增加刷票成本、也可以用approve控制
     uint256 public rechargeRate = 1000; // XMB兑换以太坊 1:1000
-    uint256 public startBlock; // 起始块
-    uint256 public stopBlock; // 结束块
+    uint256 public startTime; // 活动开始时间
+    uint256 public endTime; // 活动结束时间
 
 
     function Poetry(uint256 initialSupply, uint8 decimalUnits) public {
-        // 用恒定的块产出时间限定游戏活动时间
-        // 178560 约等于 31天
-        startBlock = block.number;
-        stopBlock = startBlock.add(178560);
+        startTime = now;
+        endTime = startTime.add(31*1 days);
         xmb = new XmbToken(initialSupply, decimalUnits);
     }
 
@@ -141,13 +139,13 @@ contract Poetry is Owned {
 
     // 游戏进行中
     modifier isNotOver() {
-        require(block.number <= stopBlock);
+        require(now <= endTime);
         _;
     }
 
     // 游戏结束
     modifier gameOver() {
-        require(block.number > stopBlock);
+        require(now > endTime);
         _;
     }
 
