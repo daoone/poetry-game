@@ -51,7 +51,7 @@ contract XmbToken is ERC20Token, Owned {
         decimals = decimalUnits;
     }
 
-    function transfer(address _to, uint256 _value) public returns (bool success) {
+    function transfer(address _to, uint256 _value) onlyOwner public returns (bool success) {
 	    if (balances[msg.sender] >= _value && balances[_to] + _value >= balances[_to]) {
             balances[msg.sender] -= _value;
             balances[_to] += _value;
@@ -61,8 +61,7 @@ contract XmbToken is ERC20Token, Owned {
 	    return false;
 	}
 
-    function transferFrom(address _from, address _to, uint256 _value) public returns (bool success) {
-        require(msg.sender == owner);
+    function transferFrom(address _from, address _to, uint256 _value) onlyOwner public returns (bool success) {
         if (balances[_from] >= _value && allowed[_from][msg.sender] >= _value && _value > 0) {
             balances[_to] += _value;
             balances[_from] -= _value;
