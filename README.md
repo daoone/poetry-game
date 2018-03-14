@@ -1,4 +1,4 @@
-# Poetry 诗人游戏
+# Poetry 诗人游戏 :octocat:
 > A Solidity Smart Contract 小明发币记教程示例合约。
 
 目的在于通过一个简单的游戏示例，帮助大家入门以太坊智能合约的开发和部署。
