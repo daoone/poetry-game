@@ -1,4 +1,4 @@
-# Poetry 诗人游戏 :octocat:
+# Poetry 诗人游戏 :dancer:
 > A Solidity Smart Contract 小明发币记教程示例合约。
 
 目的在于通过一个简单的游戏示例，帮助大家入门以太坊智能合约的开发和部署。
@@ -22,6 +22,7 @@
 可以使用[Maian](https://github.com/MAIAN-tool/MAIAN)来测试合约的安全漏洞
 
 ### MAIAN使用
+
 - 首先需要安装依赖
 1. Go Ethereum, check https://ethereum.github.io/go-ethereum/install/
 2. Solidity compiler, check http://solidity.readthedocs.io/en/develop/installing-solidity.html
@@ -32,11 +33,14 @@
 ### 利用Go与合约的交互
 
 - 需要安装
-1. Go Ethereum
-2. Solidity complier
+1. Golang 1.8+  https://golang.org/
+2. Go Ethereum
+3. Solidity complier
 
-我们需要使用go-ethereum中的abigen这个工具，安装方式参考https://github.com/ethereum/go-ethereum
+我们需要使用go-ethereum中的 `abigen` 这个工具，安装方式参考https://github.com/ethereum/go-ethereum
 
-（*make all安装完毕后请在build/bin中寻找）
+（* `make all`安装完毕后请在`build/bin`中寻找）
 
+我们使用go-ethereum自带的工具 `abigen` 生成合约对象脚本
+> abigen --sol=contracts/poetry.sol --pkg=main --out=scripts/poetry.go
 
