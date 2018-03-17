@@ -14,6 +14,7 @@ import (
 
 func main() {
 	key, _ := crypto.GenerateKey()
+	fmt.Println(key)
 	auth := bind.NewKeyedTransactor(key) // 新账户
 	fmt.Println("Base account: " + auth.From.Hex())
 
@@ -25,7 +26,6 @@ func main() {
 	addr, _, contract, err := DeployPoetry(auth, sim, big.NewInt(100000000000), uint8(2))
 	if err != nil {
 		log.Fatalf("could not deploy contract: %v", err)
-		panic(err)
 	}
 
 	// 测试环境下的提交挖矿
@@ -39,12 +39,16 @@ func main() {
 
 	fmt.Println("Adding a poem...")
 	// 参与写诗（发起一笔交易）
-	contract.AddPoem(&bind.TransactOpts{
+	trans, err := contract.AddPoem(&bind.TransactOpts{
 		From: 		auth.From,
-		Signer: 	auth.Signer,
+		Signer: 	auth.Signer, // 如果使用其他账户的签名是无法通过的
 		GasLimit: 	uint64(3000000),
 		Value: 		big.NewInt(0),
 	}, "I love Xiaoming!")
+	if err != nil {
+		log.Fatalf("Prepare AddPoem failed %v", err)
+	}
+	fmt.Println(trans.String())
 
 	fmt.Println("Mining...")
 	sim.Commit()
@@ -55,5 +59,16 @@ func main() {
 			"Poem voted token: " + poems.Votes.String(),
 			"Poem voter counts: " + poems.VoteCounts.String(),
 			"Poet address: " + poems.PoetAddr.Hex())
+
+	// 直接调用现有的XmbToken合约
+	insContract, err := NewXmbToken(xmbAddr, sim)
+	if err != nil {
+		log.Fatalf("Can not instantiate contract: %v", err)
+	}
+	balance, _ := insContract.BalanceOf(nil, addr)
+	fmt.Println("There are " + balance.String() + " XMB in contract " + addr.Hex())
+
+	//insContract.ChangeOwner()
 }
+
 

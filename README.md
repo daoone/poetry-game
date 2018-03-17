@@ -18,7 +18,7 @@
 - 所有投票人可以对链上的诗进行投票，投票会消耗XMB，消耗1xm XMB代表增加1权重。权重是最后用来判断游戏结果的标准。每个投票人对一首诗只能投票一次。
 - 这个游戏为期一个月，一个月后，小明会拿出15eth奖励得分最高的诗的诗人，85eth奖励诗对应的投票人。
 
-## 测试
+## 测试部署
 可以使用[Maian](https://github.com/MAIAN-tool/MAIAN)来测试合约的安全漏洞
 
 ### MAIAN使用
@@ -37,10 +37,10 @@
 2. Go Ethereum
 3. Solidity complier
 
-我们需要使用go-ethereum中的 `abigen` 这个工具，安装方式参考https://github.com/ethereum/go-ethereum
+我们需要使用go-ethereum中的`abigen`这个工具，安装方式参考https://github.com/ethereum/go-ethereum
 
-（* `make all`安装完毕后请在`build/bin`中寻找）
+（*`make all`安装完毕后请在`build/bin`中寻找）
 
-我们使用go-ethereum自带的工具 `abigen` 生成合约对象脚本
+我们使用go-ethereum自带的工具`abigen`生成合约对象脚本
 > abigen --sol=contracts/poetry.sol --pkg=main --out=scripts/poetry.go
 
