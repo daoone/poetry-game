@@ -30,6 +30,9 @@
 4. web3, try pip install web3
 5. PyQt5 (only for GUI Maian), try sudo apt install python-pyqt5
 
+在tools目录下直接运行
+> python maian.py -s example_contracts/Poetry.sol Poetry -c 0
+
 ### 利用Go与合约的交互
 
 - 需要安装
@@ -44,3 +47,4 @@
 我们使用go-ethereum自带的工具`abigen`生成合约对象脚本
 > abigen --sol=contracts/poetry.sol --pkg=main --out=scripts/poetry.go
 
+生成后的go文件包含了我们合约中的所有对外方法。
