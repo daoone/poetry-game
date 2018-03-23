@@ -132,7 +132,7 @@ contract Poetry is Owned {
 
     event PoemAdded(address from, uint poemId);
     event PoemVoted(address from, address to, uint poemId, uint256 value);
-    event RewardPushlished(address from, address to, uint256 value);
+    event RewardPublished(address from, address to, uint256 value);
     event RechargeFaith(address indexed to, uint256 ethValue, uint256 distrbution, uint256 refund);
     event TokenIncrease(uint256 value, uint256 balance);
 
@@ -190,7 +190,7 @@ contract Poetry is Owned {
         uint tmpVoteCounter = 0;
         for (uint i = 0; i <= winners.length-1; i++) {
             poems[winners[i]].poetAddr.transfer(eachPoetReward);
-            RewardPushlished(this, poems[winners[i]].poetAddr, eachPoetReward);
+            RewardPublished(this, poems[winners[i]].poetAddr, eachPoetReward);
             tmpVoteCounter += poems[winners[i]].voteCounts;
         }
         eachVoterReward = voteReward.div(tmpVoteCounter);
@@ -198,12 +198,11 @@ contract Poetry is Owned {
 
     // 投票人主动来领奖
     function getVoterReward() gameOver public {
-        require(gameover);
         for (uint i = 0; i <= winners.length-1; i++) {
             if (poems[winners[i]].voted[msg.sender]) {
                 msg.sender.transfer(eachVoterReward);
                 poems[winners[i]].voted[msg.sender] = false;
-                RewardPushlished(this, msg.sender, eachVoterReward);
+                RewardPublished(this, msg.sender, eachVoterReward);
             }
         }
     }
@@ -225,7 +224,7 @@ contract Poetry is Owned {
 
     // 兑换XMB
     function buyXmb() payable public {
-        uint256 distrbution;
+        uint256 distribution;
         uint256 _refund = 0;
         // 转入金额大于0 并且转换后小于可分发token的数量
         if ((msg.value > 0) && (tokenExchange(msg.value) < xmb.balances(this))) {
@@ -233,13 +232,13 @@ contract Poetry is Owned {
                 // 超过兑换限制会把多余的退回去
                 _refund = msg.value.sub(rechargeLimit);
                 msg.sender.transfer(_refund);
-                distrbution = tokenExchange(rechargeLimit);
+                distribution = tokenExchange(rechargeLimit);
             } else {
-                distrbution = tokenExchange(msg.value);
+                distribution = tokenExchange(msg.value);
             }
-            xmb.transfer(msg.sender, distrbution);
+            xmb.transfer(msg.sender, distribution);
         }
-        RechargeFaith(msg.sender, msg.value, distrbution, _refund);
+        RechargeFaith(msg.sender, msg.value, distribution, _refund);
     }
 
     function tokenExchange(uint256 inputAmount) internal view returns (uint256) {

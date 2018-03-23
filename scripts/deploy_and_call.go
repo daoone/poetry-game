@@ -68,7 +68,5 @@ func main() {
 	balance, _ := insContract.BalanceOf(nil, addr)
 	fmt.Println("There are " + balance.String() + " XMB in contract " + addr.Hex())
 
-	//insContract.ChangeOwner()
 }
-
 
