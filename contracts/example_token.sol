@@ -1,4 +1,4 @@
-pragma solidity ^0.4.18;
+pragma solidity ^0.4.21;
 
 contract Token {
     // token 持有者
@@ -8,7 +8,7 @@ contract Token {
     // 记录账户余额
     mapping (address => uint256) public balances;
     // 一个事件记录
-    event Transfer(address indexed To, uint256 Value);
+    event Transfer(address indexed From, address indexed To, uint256 Value);
     // 构造函数
     function Token(uint256 _initSupply) public {
         owner = msg.sender;
@@ -16,11 +16,15 @@ contract Token {
         balances[owner] = initSupply;
     }
 
+    function balanceOf(address _owner) public constant returns (uint256) {
+        return balances[_owner];
+    }
+
     function transfer(address _to, uint256 _value) public returns (bool) {
         if (balances[msg.sender] >= _value && balances[_to] + _value >= balances[_to]) {
             balances[msg.sender] -= _value;
             balances[_to] += _value;
-            Transfer(msg.sender, _to, _value);
+            emit Transfer(msg.sender, _to, _value);
             return true;
         }
         return false;
@@ -39,15 +43,15 @@ contract MyWallet {
     }
 
     function buyToken() payable public returns (bool) {
-        require(msg.value * 100 < mt.balances[address(this)]);
+        require(msg.value * 100 < mt.balanceOf(address(this)));
         uint256 distribution;
         distribution = msg.value * 100;
-        mt.balances[msg.sender] += distribution;
-        mt.balances[address(this)] -= distribution;
+        mt.transfer(msg.sender, distribution);
     }
+
     // 提现
     function withdraw(uint256 _value) public returns (bool) {
-        require(_value < this.balance && msg.sender == owner);
+        require(_value < address(this).balance && msg.sender == owner);
         owner.transfer(_value);
     }
 }
