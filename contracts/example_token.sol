@@ -1,6 +1,8 @@
 pragma solidity ^0.4.21;
 
 contract Token {
+    string public name = "MyToken";
+    string public symbol = "MTT";
     // token 持有者
     address public owner;
     // token 初始化数量
@@ -34,18 +36,19 @@ contract Token {
 contract MyWallet {
     Token public mt;
     address public owner;
-    uint256 public exchangeRate = 100; // 一个eth等值于100个MyToken
+    uint256 public exchangeRate = 1; // 一个wei等值于100个MyToken
 
     event ByMyToken(address indexed From, uint256 );
 
     function MyWallet(uint256 _initSupply) public {
+        owner = msg.sender;
         mt = new Token(_initSupply);
     }
 
     function buyToken() payable public returns (bool) {
-        require(msg.value * 100 < mt.balanceOf(address(this)));
+        require(msg.value * exchangeRate < mt.balanceOf(address(this)));
         uint256 distribution;
-        distribution = msg.value * 100;
+        distribution = msg.value * exchangeRate;
         mt.transfer(msg.sender, distribution);
     }
 
